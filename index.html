@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналитический Дашборд</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1 class="header__title">📊 Аналитический Дашборд</h1>
+            <p class="header__subtitle">Управляйте своими данными и задачами</p>
+        </header>
+
+        <nav class="controls">
+            <div class="controls__section">
+                <div class="controls__header">
+                    <h3>Добавить виджет:</h3>
+                </div>
+                <div class="controls__buttons">
+                    <button class="btn btn--primary" data-widget="todo">
+                        📝 Список дел
+                    </button>
+                    <button class="btn btn--secondary" data-widget="quote">
+                        💭 Случайная цитата
+                    </button>
+                    <button class="btn btn--info" data-widget="weather">
+                        🌤️ Погода
+                    </button>
+                    <button class="btn btn--warning" data-widget="crypto">
+                        💰 Криптовалюты
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="dashboard" id="dashboard">
+            <!-- Виджеты будут добавляться сюда динамически -->
+        </main>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,733 @@
+/**
+ * Стили для виджетов и компонентов
+ * Современный дизайн с анимациями и интерактивностью
+ */
+
+/* Базовые стили виджетов */
+.widget {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    width: 500px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.widget:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+}
+
+.widget--minimized {
+    min-height: auto;
+}
+
+.widget--minimized .widget__content {
+    display: none;
+}
+
+/* Заголовок виджета */
+.widget__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, #f7fafc, #edf2f7);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.widget__title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+}
+
+.widget__controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.widget__btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #718096;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.widget__btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #2d3748;
+}
+
+.widget__btn--close:hover {
+    background: #f56565;
+    color: white;
+}
+
+/* Содержимое виджета */
+.widget__content {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+    max-height: calc(500px - 80px); /* Высота виджета минус заголовок */
+}
+
+/* Кастомный скроллбар */
+.widget__content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.widget__content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.widget__content::-webkit-scrollbar-thumb {
+    background: rgba(102, 126, 234, 0.5);
+    border-radius: 3px;
+}
+
+.widget__content::-webkit-scrollbar-thumb:hover {
+    background: rgba(102, 126, 234, 0.7);
+}
+
+/* ===== TODO WIDGET ===== */
+.todo-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+}
+
+.todo-widget__input {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.todo-widget__input-field {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background: white;
+}
+
+.todo-widget__input-field:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.todo-widget__add-btn {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.todo-widget__stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f7fafc;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.todo-widget__stat {
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.todo-widget__stat strong {
+    color: #2d3748;
+}
+
+.todo-widget__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.todo-widget__empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.todo-widget__task {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+
+.todo-widget__task:hover {
+    border-color: #cbd5e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.todo-widget__task--completed {
+    opacity: 0.7;
+    background: #f7fafc;
+}
+
+.todo-widget__task--completed .todo-widget__task-text {
+    text-decoration: line-through;
+    color: #a0aec0;
+}
+
+.todo-widget__task-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.todo-widget__checkbox {
+    display: none;
+}
+
+.todo-widget__checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #cbd5e0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: white;
+}
+
+.todo-widget__checkbox:checked + .todo-widget__checkbox-custom {
+    background: #48bb78;
+    border-color: #48bb78;
+}
+
+.todo-widget__checkbox:checked + .todo-widget__checkbox-custom::after {
+    content: '✓';
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.todo-widget__task-text {
+    flex: 1;
+    font-size: 0.95rem;
+    color: #2d3748;
+    word-break: break-word;
+}
+
+.todo-widget__delete-btn {
+    background: none;
+    border: none;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.todo-widget__delete-btn:hover {
+    background: #fed7d7;
+    color: #f56565;
+}
+
+.todo-widget__actions {
+    display: flex;
+    justify-content: center;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.todo-widget__clear-btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+/* ===== QUOTE WIDGET ===== */
+.quote-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+    height: 100%;
+}
+
+.quote-widget__content {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quote-widget__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: #718096;
+}
+
+.quote-widget__spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.quote-widget__placeholder {
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.quote-widget__quote {
+    margin: 0;
+    font-style: italic;
+}
+
+.quote-widget__text {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #2d3748;
+    margin-bottom: 1rem;
+    quotes: '"' '"';
+}
+
+.quote-widget__text::before {
+    content: open-quote;
+    color: #a0aec0;
+    font-size: 2rem;
+    line-height: 0;
+    vertical-align: -0.3em;
+}
+
+.quote-widget__text::after {
+    content: close-quote;
+    color: #a0aec0;
+    font-size: 2rem;
+    line-height: 0;
+    vertical-align: -0.3em;
+}
+
+.quote-widget__author {
+    font-size: 0.95rem;
+    color: #718096;
+    font-weight: 500;
+}
+
+.quote-widget__author cite {
+    font-style: normal;
+    color: #4a5568;
+}
+
+.quote-widget__actions {
+    display: flex;
+    justify-content: center;
+}
+
+.quote-widget__refresh-btn {
+    padding: 0.75rem 1.5rem;
+}
+
+.quote-widget__info {
+    text-align: center;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.quote-widget__info small {
+    color: #a0aec0;
+    font-size: 0.8rem;
+}
+
+.quote-widget__info a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.quote-widget__info a:hover {
+    text-decoration: underline;
+}
+
+/* ===== WEATHER WIDGET ===== */
+.weather-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: 100%;
+}
+
+.weather-widget__location {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.weather-widget__city-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background: white;
+}
+
+.weather-widget__city-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.weather-widget__search-btn {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+}
+
+.weather-widget__content {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.weather-widget__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: #718096;
+}
+
+.weather-widget__spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.weather-widget__placeholder {
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.weather-widget__main {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.weather-widget__temperature {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.weather-widget__description {
+    font-size: 1.1rem;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.weather-widget__details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.weather-widget__detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: #f7fafc;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.weather-widget__label {
+    color: #718096;
+    font-weight: 500;
+}
+
+.weather-widget__value {
+    color: #2d3748;
+    font-weight: 600;
+}
+
+.weather-widget__actions {
+    display: flex;
+    justify-content: center;
+}
+
+.weather-widget__refresh-btn {
+    padding: 0.75rem 1.5rem;
+}
+
+.weather-widget__info {
+    text-align: center;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.weather-widget__info small {
+    color: #a0aec0;
+    font-size: 0.8rem;
+}
+
+/* ===== CRYPTO WIDGET ===== */
+.crypto-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: 100%;
+}
+
+.crypto-widget__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.crypto-widget__header h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+}
+
+.crypto-widget__currency-select {
+    padding: 0.5rem 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    font-size: 0.9rem;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.crypto-widget__currency-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.crypto-widget__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.crypto-widget__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: #718096;
+}
+
+.crypto-widget__spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.crypto-widget__placeholder {
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.crypto-widget__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+}
+
+.crypto-widget__item:hover {
+    border-color: #cbd5e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.crypto-widget__crypto-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.crypto-widget__crypto-icon {
+    font-size: 1.5rem;
+    width: 32px;
+    text-align: center;
+}
+
+.crypto-widget__crypto-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.crypto-widget__crypto-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.95rem;
+}
+
+.crypto-widget__crypto-symbol {
+    color: #718096;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.crypto-widget__crypto-price {
+    text-align: right;
+}
+
+.crypto-widget__price {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.crypto-widget__change {
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.crypto-widget__change--positive {
+    color: #38a169;
+    background: #f0fff4;
+}
+
+.crypto-widget__change--negative {
+    color: #e53e3e;
+    background: #fed7d7;
+}
+
+.crypto-widget__actions {
+    display: flex;
+    justify-content: center;
+}
+
+.crypto-widget__refresh-btn {
+    padding: 0.75rem 1.5rem;
+}
+
+.crypto-widget__info {
+    text-align: center;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.crypto-widget__info small {
+    color: #a0aec0;
+    font-size: 0.8rem;
+}
+
+/* Адаптивность для виджетов */
+@media (max-width: 768px) {
+    .widget {
+        min-height: 180px;
+    }
+    
+    .widget__content {
+        padding: 1rem;
+    }
+    
+    .todo-widget__input {
+        flex-direction: column;
+    }
+    
+    .todo-widget__stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .weather-widget__location {
+        flex-direction: column;
+    }
+    
+    .weather-widget__details {
+        grid-template-columns: 1fr;
+    }
+    
+    .crypto-widget__item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .crypto-widget__crypto-price {
+        text-align: left;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .widget__header {
+        padding: 1rem;
+    }
+    
+    .widget__content {
+        padding: 0.75rem;
+    }
+    
+    .quote-widget__text {
+        font-size: 1rem;
+    }
+    
+    .weather-widget__temperature {
+        font-size: 2.5rem;
+    }
+}
