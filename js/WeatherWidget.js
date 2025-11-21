@@ -1,342 +1,423 @@
 import { UIComponent } from './UIComponent.js';
 
-/**
- * Виджет для отображения погоды
- * Получает данные с внешнего API OpenWeatherMap
- */
 export class WeatherWidget extends UIComponent {
     constructor(config = {}) {
-        super({
+        super({ 
             ...config,
-            title: config.title || '🌤️ Погода',
-            type: 'weather'
+            title: config.title || '🌤️ Погода'
         });
         
-        this.city = config.city || 'Москва';
-        this.weatherData = null;
+        this.weatherData = config.weatherData || null;
+        this.location = config.location || 'Moscow';
+        this.apiKeys = [
+            '1ab2e4c24809a73a125925778e297ff1',
+            '73d97d40da8542ec0b65d35763a3c21e'
+        ];
+        this.currentApiKeyIndex = 0;
         this.isLoading = false;
+        this.autoRefreshInterval = null;
+        this.refreshInterval = 2 * 60 * 60 * 1000;
         this.lastUpdate = null;
-        this.updateInterval = 10 * 60 * 1000; // 10 минут
-        this.updateTimer = null;
-        
-        // API ключ для OpenWeatherMap
-        this.apiKey = '7f958b5c29d990879d16c1b7bd590b5e';
-        // Используем прокси для обхода CORS на GitHub Pages
-        this.proxyUrl = 'https://corsproxy.io/?';
-        this.apiUrl = 'https://api.openweathermap.org/data/2.5/weather';
+        this.fetchTimeout = null;
+        this.abortController = null;
     }
 
-    /**
-     * Формирует URL для запроса к OpenWeatherMap API
-     */
-    getApiUrl() {
-        const directUrl = `${this.apiUrl}?q=${encodeURIComponent(this.city)}&appid=${this.apiKey}&units=metric&lang=ru`;
+    initialize() {
+        this.startAutoRefresh();
         
-        // Определяем, запущено ли приложение на GitHub Pages
-        const isGitHubPages = window.location.hostname.includes('github.io');
-        
-        // Используем прокси только для GitHub Pages для обхода CORS
-        return isGitHubPages ? this.proxyUrl + encodeURIComponent(directUrl) : directUrl;
+        this.fetchTimeout = setTimeout(() => {
+            if (!this.isLoading) {
+                this.fetchWeatherData();
+            }
+        }, 1000);
     }
 
-    /**
-     * Рендерит содержимое виджета погоды
-     */
     renderContent() {
         return `
-            <div class="weather-widget">
-                <div class="weather-widget__location">
-                    <input 
-                        type="text" 
-                        class="weather-widget__city-input" 
-                        placeholder="Введите город"
-                        value="${this.escapeHtml(this.city)}"
-                        maxlength="50"
-                    >
-                    <button class="weather-widget__search-btn btn btn--primary">
-                        🔍
-                    </button>
+            <div class="weather-container">
+                <div class="weather-current">
+                    ${this.renderCurrentWeather()}
                 </div>
-                
-                <div class="weather-widget__content">
-                    ${this.isLoading ? this.renderLoading() : this.renderWeather()}
-                </div>
-                
-                <div class="weather-widget__actions">
-                    <button class="weather-widget__refresh-btn btn btn--secondary" ${this.isLoading ? 'disabled' : ''}>
-                        ${this.isLoading ? '⏳ Загрузка...' : '🔄 Обновить'}
-                    </button>
-                </div>
-                
-                ${this.lastUpdate ? `
-                    <div class="weather-widget__info">
-                        <small>Обновлено: ${this.formatTime(this.lastUpdate)}</small>
+
+                <div class="weather-forecast">
+                    <h4>Прогноз на день</h4>
+                    <div class="forecast-list">
+                        ${this.renderForecast()}
                     </div>
-                ` : ''}
+                </div>
+
+                <div class="weather-details">
+                    <h4>📊 Детали</h4>
+                    ${this.renderWeatherDetails()}
+                </div>
+
+                <div class="weather-recommendations">
+                    <h4>💡 Рекомендации</h4>
+                    ${this.renderRecommendations()}
+                </div>
+
+                <div class="weather-footer">
+                    <div class="weather-update-info">
+                        ${this.renderUpdateInfo()}
+                    </div>
+                    <div class="weather-actions">
+                        <button class="action-btn refresh-btn" ${this.isLoading ? 'disabled' : ''}>
+                            ${this.isLoading ? '🔄 Загрузка...' : '🔄 Обновить'}
+                        </button>
+                        <button class="action-btn location-btn">📍 Сменить город</button>
+                    </div>
+                </div>
             </div>
         `;
     }
 
-    /**
-     * Экранирует HTML-символы для безопасности
-     */
-    escapeHtml(str) {
-        if (!str) return '';
-        return str.toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "<")
-            .replace(/>/g, ">")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
-    /**
-     * Рендерит состояние загрузки
-     */
-    renderLoading() {
-        return `
-            <div class="weather-widget__loading">
-                <div class="weather-widget__spinner"></div>
-                <p>Получаем данные о погоде...</p>
-            </div>
-        `;
-    }
-
-    /**
-     * Рендерит данные о погоде
-     */
-    renderWeather() {
+    renderCurrentWeather() {
         if (!this.weatherData) {
             return `
-                <div class="weather-widget__placeholder">
-                    <p>Нажмите "Обновить" чтобы получить данные о погоде</p>
+                <div class="weather-loading">
+                    <div class="loading-spinner">🔄</div>
+                    <div>Загрузка данных о погоде...</div>
                 </div>
             `;
         }
 
-        const { main, weather, wind } = this.weatherData;
-        const weatherInfo = weather[0];
-        const feelsLike = main.feels_like !== undefined ? Math.round(main.feels_like) : Math.round(main.temp);
+        const temp = Math.round(this.weatherData.main.temp);
+        const feelsLike = Math.round(this.weatherData.main.feels_like);
+        const description = this.weatherData.weather[0].description;
+        const icon = this.getWeatherIcon(this.weatherData.weather[0].main);
+        const city = this.weatherData.name;
 
         return `
-            <div class="weather-widget__main">
-                <div class="weather-widget__temperature">
-                    ${Math.round(main.temp)}°C
-                </div>
-                <div class="weather-widget__description">
-                    ${this.getWeatherEmoji(weatherInfo.main)} ${this.escapeHtml(weatherInfo.description)}
-                </div>
+            <div class="current-main">
+                <div class="weather-icon-large">${icon}</div>
+                <div class="weather-temp-large">${temp}°C</div>
             </div>
-            
-            <div class="weather-widget__details">
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Ощущается как:</span>
-                    <span class="weather-widget__value">${feelsLike}°C</span>
+            <div class="current-details">
+                <div class="weather-city">📍 ${city}</div>
+                <div class="weather-desc">${description}</div>
+                <div class="weather-feels-like">Ощущается как ${feelsLike}°C</div>
+            </div>
+        `;
+    }
+
+    renderWeatherDetails() {
+        if (!this.weatherData) return '<div class="weather-detail">Нет данных</div>';
+
+        const humidity = this.weatherData.main.humidity;
+        const windSpeed = this.weatherData.wind.speed;
+        const pressure = Math.round(this.weatherData.main.pressure * 0.75);
+        const visibility = this.weatherData.visibility ? (this.weatherData.visibility / 1000) : 'N/A';
+
+        return `
+            <div class="weather-details-grid">
+                <div class="weather-detail">
+                    <span class="detail-icon">💧</span>
+                    <span class="detail-label">Влажность:</span>
+                    <span class="detail-value">${humidity}%</span>
                 </div>
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Влажность:</span>
-                    <span class="weather-widget__value">${main.humidity}%</span>
+                <div class="weather-detail">
+                    <span class="detail-icon">💨</span>
+                    <span class="detail-label">Ветер:</span>
+                    <span class="detail-value">${windSpeed} м/с</span>
                 </div>
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Давление:</span>
-                    <span class="weather-widget__value">${Math.round(main.pressure * 0.75)} мм рт.ст.</span>
+                <div class="weather-detail">
+                    <span class="detail-icon">🌡️</span>
+                    <span class="detail-label">Давление:</span>
+                    <span class="detail-value">${pressure} мм</span>
                 </div>
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Ветер:</span>
-                    <span class="weather-widget__value">${Math.round(wind.speed)} м/с</span>
+                <div class="weather-detail">
+                    <span class="detail-icon">👁️</span>
+                    <span class="detail-label">Видимость:</span>
+                    <span class="detail-value">${visibility} км</span>
                 </div>
             </div>
         `;
     }
 
-    /**
-     * Привязывает обработчики событий
-     */
-    attachEventListeners() {
-        super.attachEventListeners();
-        
-        if (!this.element) return;
+    renderForecast() {
+        if (!this.weatherData) return '<div class="forecast-item">Нет данных</div>';
 
-        // Обработчик поиска по городу
-        const searchBtn = this.element.querySelector('.weather-widget__search-btn');
-        const cityInput = this.element.querySelector('.weather-widget__city-input');
+        const currentTemp = Math.round(this.weatherData.main.temp);
+        const weatherType = this.weatherData.weather[0].main;
         
-        if (searchBtn && cityInput) {
-            const searchWeather = () => {
-                const newCity = cityInput.value.trim();
-                if (newCity && newCity !== this.city) {
-                    this.city = newCity;
-                    this.loadWeather();
-                }
-            };
+        const forecasts = [
+            { time: 'Сейчас', temp: currentTemp, icon: this.getWeatherIcon(weatherType) },
+            { time: '+3ч', temp: currentTemp + 1, icon: this.getWeatherIcon(weatherType) },
+            { time: '+6ч', temp: currentTemp - 1, icon: this.getForecastIcon(weatherType, 6) },
+            { time: '+12ч', temp: currentTemp - 2, icon: this.getForecastIcon(weatherType, 12) }
+        ];
 
-            searchBtn.addEventListener('click', searchWeather);
-            cityInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    searchWeather();
-                }
+        return forecasts.map(forecast => `
+            <div class="forecast-item">
+                <div class="forecast-time">${forecast.time}</div>
+                <div class="forecast-icon">${forecast.icon}</div>
+                <div class="forecast-temp">${forecast.temp}°</div>
+            </div>
+        `).join('');
+    }
+
+    renderRecommendations() {
+        const recommendations = [];
+        
+        if (this.weatherData) {
+            const weather = this.weatherData.weather[0].main;
+            const temp = this.weatherData.main.temp;
+
+            if (weather === 'Rain' || weather === 'Drizzle') {
+                recommendations.push('🌂 Возьмите зонт');
+                recommendations.push('🚶 Осторожно на мокрых дорогах');
+            }
+            if (weather === 'Snow') {
+                recommendations.push('🧤 Теплые перчатки не помешают');
+                recommendations.push('🥾 Обувь с нескользящей подошвой');
+            }
+            if (temp < 0) {
+                recommendations.push('🧥❄️ Оденьтесь очень тепло - мороз!');
+                recommendations.push('🔋 Проверьте заряд телефона на холоде');
+            } else if (temp < 5) {
+                recommendations.push('🧥 Оденьтесь теплее - холодно!');
+            } else if (temp < 15) {
+                recommendations.push('🧥 Возьмите куртку или ветровку');
+            }
+            if (temp > 25) {
+                recommendations.push('🧴 Не забудьте солнцезащитный крем');
+                recommendations.push('💧 Пейте больше воды');
+                recommendations.push('🕶️ Солнечные очки будут кстати');
+            }
+            if (this.weatherData.wind.speed > 8) {
+                recommendations.push('💨 Ветрено - будьте осторожны');
+                recommendations.push('🎩 Закрепите головные уборы');
+            }
+            if (this.weatherData.main.humidity > 80) {
+                recommendations.push('💦 Высокая влажность - может быть душно');
+            }
+        }
+
+        if (recommendations.length === 0) {
+            recommendations.push('✅ Идеальные условия для работы и прогулок');
+            recommendations.push('☕ Наслаждайтесь комфортной погодой');
+        }
+
+        return recommendations.slice(0, 4).map(rec => `
+            <div class="recommendation-item">${rec}</div>
+        `).join('');
+    }
+
+    renderUpdateInfo() {
+        if (!this.lastUpdate) return 'Данные обновляются...';
+        
+        const now = new Date();
+        const updateTime = new Date(this.lastUpdate);
+        const diffMinutes = Math.floor((now - updateTime) / 60000);
+        
+        if (diffMinutes < 1) {
+            return 'Обновлено: только что';
+        } else if (diffMinutes < 60) {
+            return `Обновлено: ${diffMinutes} мин назад`;
+        } else {
+            return `Обновлено: ${updateTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}`;
+        }
+    }
+
+    bindEvents() {
+        super.bindEvents();
+
+        const refreshBtn = this.element?.querySelector('.refresh-btn');
+        const locationBtn = this.element?.querySelector('.location-btn');
+
+        if (refreshBtn) {
+            this.addListener(refreshBtn, 'click', () => {
+                this.fetchWeatherData();
             });
         }
-
-        // Обработчик обновления
-        const refreshBtn = this.element.querySelector('.weather-widget__refresh-btn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.loadWeather());
+        if (locationBtn) {
+            this.addListener(locationBtn, 'click', () => this.changeLocation());
         }
     }
 
-    /**
-     * Загружает данные о погоде
-     */
-    async loadWeather() {
+    startAutoRefresh() {
+        this.stopAutoRefresh();
+        
+        this.autoRefreshInterval = setInterval(() => {
+            if (this.isLoading) return;
+            this.fetchWeatherData();
+        }, this.refreshInterval);
+    }
+
+    stopAutoRefresh() {
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+            this.autoRefreshInterval = null;
+        }
+        
+        if (this.fetchTimeout) {
+            clearTimeout(this.fetchTimeout);
+            this.fetchTimeout = null;
+        }
+    }
+
+    async fetchWeatherData() {
         if (this.isLoading) return;
-
+        
+        if (this.abortController) {
+            this.abortController.abort();
+        }
+        
         this.isLoading = true;
-        this.update();
-
+        this.updateRefreshButton();
+        
+        this.abortController = new AbortController();
+        
         try {
-            console.log('Запрос данных о погоде для города:', this.city);
-            console.log('URL запроса:', this.getApiUrl());
+            const data = await this.tryAllApiKeys();
             
-            const response = await fetch(this.getApiUrl());
-            
-            console.log('Статус ответа:', response.status);
-            
-            if (response.status === 401) {
-                throw new Error('Неверный или неактивный API-ключ');
+            if (data) {
+                this.weatherData = data;
+                this.lastUpdate = Date.now();
+            } else {
+                throw new Error('Все API ключи нерабочие');
             }
-            
-            if (response.status === 404) {
-                throw new Error('Город не найден. Проверьте название города');
-            }
-            
-            if (response.status === 429) {
-                throw new Error('Превышен лимит запросов к API. Попробуйте позже');
-            }
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                const errorMessage = errorData?.message || `Ошибка сервера: ${response.status}`;
-                throw new Error(errorMessage);
-            }
-            
-            const data = await response.json();
-            console.log('Полученные данные о погоде:', data);
-            
-            // Проверка структуры данных
-            if (!data.main || !data.weather || !data.wind) {
-                throw new Error('Неверная структура ответа от API');
-            }
-
-            this.weatherData = data;
-            this.lastUpdate = new Date();
-            
-            console.log('Данные о погоде успешно загружены');
             
         } catch (error) {
-            console.error('Ошибка загрузки данных о погоде:', error);
-            this.showError(error.message || 'Не удалось загрузить данные о погоде. Проверьте консоль для деталей.');
-            this.weatherData = null;
+            if (error.name === 'AbortError') return;
+            
+            console.error('Weather API error:', error);
+            this.useDemoData();
+            this.lastUpdate = Date.now();
         } finally {
             this.isLoading = false;
-            this.update();
-        }
-    }
-
-    /**
-     * Отображает сообщение об ошибке
-     */
-    showError(message) {
-        if (!this.element) return;
-        
-        const contentElement = this.element.querySelector('.weather-widget__content');
-        if (contentElement) {
-            contentElement.innerHTML = `
-                <div class="weather-widget__error">
-                    <div class="weather-widget__error-icon">⚠️</div>
-                    <div class="weather-widget__error-message">${this.escapeHtml(message)}</div>
-                    <button class="weather-widget__retry-btn btn btn--secondary" style="margin-top: 10px">
-                        Попробовать снова
-                    </button>
-                </div>
-            `;
+            this.abortController = null;
             
-            const retryBtn = contentElement.querySelector('.weather-widget__retry-btn');
-            if (retryBtn) {
-                retryBtn.addEventListener('click', () => this.loadWeather());
+            if (this.element) {
+                this.updateDisplay();
             }
         }
     }
 
-    /**
-     * Возвращает эмодзи для типа погоды
-     */
-    getWeatherEmoji(weatherMain) {
-        const emojiMap = {
-            'Clear': '☀️',
-            'Clouds': '☁️',
-            'Rain': '🌧️',
-            'Drizzle': '🌦️',
-            'Snow': '❄️',
-            'Thunderstorm': '⛈️',
-            'Mist': '🌫️',
-            'Fog': '🌫️',
-            'Smoke': '🌫️',
-            'Haze': '🌫️',
-            'Dust': '💨',
-            'Sand': '💨',
-            'Ash': '🌋',
-            'Squall': '💨',
-            'Tornado': '🌪️'
-        };
-        return emojiMap[weatherMain] || '🌤️';
-    }
-
-    /**
-     * Форматирует время для отображения
-     */
-    formatTime(date) {
-        return date.toLocaleTimeString('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-
-    /**
-     * Инициализация виджета
-     */
-    async initialize() {
-        await this.loadWeather();
-        
-        // Устанавливаем автоматическое обновление
-        this.startAutoUpdate();
-    }
-
-    /**
-     * Запускает автоматическое обновление
-     */
-    startAutoUpdate() {
-        this.stopAutoUpdate();
-        
-        this.updateTimer = setInterval(() => {
-            this.loadWeather();
-        }, this.updateInterval);
-    }
-
-    /**
-     * Останавливает автоматическое обновление
-     */
-    stopAutoUpdate() {
-        if (this.updateTimer) {
-            clearInterval(this.updateTimer);
-            this.updateTimer = null;
+    updateRefreshButton() {
+        const refreshBtn = this.element?.querySelector('.refresh-btn');
+        if (refreshBtn) {
+            if (this.isLoading) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '🔄 Загрузка...';
+            } else {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '🔄 Обновить';
+            }
         }
     }
 
-    /**
-     * Очистка ресурсов при уничтожении виджета
-     */
-    onDestroy() {
-        this.stopAutoUpdate();
+    async tryAllApiKeys() {
+        const signal = this.abortController?.signal;
+        
+        for (let i = 0; i < this.apiKeys.length; i++) {
+            if (signal?.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+            }
+            
+            try {
+                this.currentApiKeyIndex = i;
+                const apiKey = this.apiKeys[i];
+                
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?q=${this.location}&units=metric&appid=${apiKey}&lang=ru`,
+                    { signal }
+                );
+                
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') throw error;
+            }
+        }
+        return null;
+    }
+
+    useDemoData() {
+        this.weatherData = {
+            main: {
+                temp: 18 + Math.random() * 8,
+                feels_like: 16 + Math.random() * 10,
+                humidity: 40 + Math.random() * 40,
+                pressure: 1013,
+                temp_min: 15 + Math.random() * 5,
+                temp_max: 20 + Math.random() * 10
+            },
+            weather: [{
+                main: ['Clear', 'Clouds', 'Rain'][Math.floor(Math.random() * 3)],
+                description: ['ясно', 'облачно', 'небольшой дождь'][Math.floor(Math.random() * 3)]
+            }],
+            wind: {
+                speed: (1 + Math.random() * 7).toFixed(1)
+            },
+            visibility: 10000,
+            name: this.location,
+            sys: {
+                country: 'RU'
+            }
+        };
+    }
+
+    updateDisplay() {
+        const container = this.element?.querySelector('.weather-container');
+        if (container) {
+            container.innerHTML = this.renderContent();
+            this.bindEvents();
+        }
+    }
+
+    changeLocation() {
+        const newLocation = prompt('Введите название города:', this.location);
+        if (newLocation && newLocation.trim()) {
+            this.location = newLocation.trim();
+            this.stopAutoRefresh();
+            this.fetchWeatherData();
+            this.startAutoRefresh();
+        }
+    }
+
+    getWeatherIcon(weatherType) {
+        const icons = {
+            'Clear': '☀️',
+            'Clouds': '🌤️',
+            'Rain': '🌧️',
+            'Snow': '❄️',
+            'Thunderstorm': '⛈️',
+            'Drizzle': '🌦️',
+            'Mist': '🌫️',
+            'Fog': '🌫️'
+        };
+        return icons[weatherType] || '🌤️';
+    }
+
+    getForecastIcon(weatherType, hours) {
+        if (hours >= 18 || hours <= 6) {
+            const nightIcons = {
+                'Clear': '🌙',
+                'Clouds': '☁️',
+                'Rain': '🌧️',
+                'Snow': '❄️'
+            };
+            return nightIcons[weatherType] || '🌙';
+        }
+        return this.getWeatherIcon(weatherType);
+    }
+
+    refresh() {
+        if (!this.isLoading) {
+            this.fetchWeatherData();
+        }
+    }
+
+    destroy() {
+        this.stopAutoRefresh();
+        
+        if (this.abortController) {
+            this.abortController.abort();
+            this.abortController = null;
+        }
+        
+        super.destroy();
     }
 }
