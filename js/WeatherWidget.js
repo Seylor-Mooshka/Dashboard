@@ -21,6 +21,8 @@ export class WeatherWidget extends UIComponent {
         
         // API ключ для OpenWeatherMap
         this.apiKey = 'f6392c735d2b68f57323a6903c8a85f9';
+        // Используем прокси для обхода CORS на GitHub Pages
+        this.proxyUrl = 'https://corsproxy.io/?';
         this.apiUrl = 'https://api.openweathermap.org/data/2.5/weather';
     }
 
@@ -28,7 +30,13 @@ export class WeatherWidget extends UIComponent {
      * Формирует URL для запроса к OpenWeatherMap API
      */
     getApiUrl() {
-        return `${this.apiUrl}?q=${encodeURIComponent(this.city)}&appid=${this.apiKey}&units=metric&lang=ru`;
+        const directUrl = `${this.apiUrl}?q=${encodeURIComponent(this.city)}&appid=${this.apiKey}&units=metric&lang=ru`;
+        
+        // Определяем, запущено ли приложение на GitHub Pages
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        
+        // Используем прокси только для GitHub Pages для обхода CORS
+        return isGitHubPages ? this.proxyUrl + encodeURIComponent(directUrl) : directUrl;
     }
 
     /**
@@ -42,7 +50,7 @@ export class WeatherWidget extends UIComponent {
                         type="text" 
                         class="weather-widget__city-input" 
                         placeholder="Введите город"
-                        value="${this.city}"
+                        value="${this.escapeHtml(this.city)}"
                         maxlength="50"
                     >
                     <button class="weather-widget__search-btn btn btn--primary">
@@ -67,6 +75,19 @@ export class WeatherWidget extends UIComponent {
                 ` : ''}
             </div>
         `;
+    }
+
+    /**
+     * Экранирует HTML-символы для безопасности
+     */
+    escapeHtml(str) {
+        if (!str) return '';
+        return str.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "<")
+            .replace(/>/g, ">")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     /**
@@ -103,7 +124,7 @@ export class WeatherWidget extends UIComponent {
                     ${Math.round(main.temp)}°C
                 </div>
                 <div class="weather-widget__description">
-                    ${this.getWeatherEmoji(weatherInfo.main)} ${weatherInfo.description}
+                    ${this.getWeatherEmoji(weatherInfo.main)} ${this.escapeHtml(weatherInfo.description)}
                 </div>
             </div>
             
@@ -174,39 +195,47 @@ export class WeatherWidget extends UIComponent {
         this.update();
 
         try {
-            // Запрос к реальному API OpenWeatherMap
+            console.log('Запрос данных о погоде для города:', this.city);
+            console.log('URL запроса:', this.getApiUrl());
+            
             const response = await fetch(this.getApiUrl());
             
-            // Обработка различных статусов ответа
+            console.log('Статус ответа:', response.status);
+            
             if (response.status === 401) {
-                throw new Error('Неверный API ключ');
+                throw new Error('Неверный или неактивный API-ключ');
             }
             
             if (response.status === 404) {
-                throw new Error('Город не найден');
+                throw new Error('Город не найден. Проверьте название города');
             }
             
             if (response.status === 429) {
-                throw new Error('Превышен лимит запросов. Попробуйте через несколько минут.');
+                throw new Error('Превышен лимит запросов к API. Попробуйте позже');
             }
             
             if (!response.ok) {
-                throw new Error(`Ошибка загрузки данных: ${response.status}`);
+                const errorData = await response.json().catch(() => null);
+                const errorMessage = errorData?.message || `Ошибка сервера: ${response.status}`;
+                throw new Error(errorMessage);
             }
             
             const data = await response.json();
+            console.log('Полученные данные о погоде:', data);
             
             // Проверка структуры данных
             if (!data.main || !data.weather || !data.wind) {
-                throw new Error('Некорректный ответ от сервера');
+                throw new Error('Неверная структура ответа от API');
             }
 
             this.weatherData = data;
             this.lastUpdate = new Date();
             
+            console.log('Данные о погоде успешно загружены');
+            
         } catch (error) {
             console.error('Ошибка загрузки данных о погоде:', error);
-            this.showError(error.message || 'Не удалось загрузить данные о погоде');
+            this.showError(error.message || 'Не удалось загрузить данные о погоде. Проверьте консоль для деталей.');
             this.weatherData = null;
         } finally {
             this.isLoading = false;
@@ -225,7 +254,7 @@ export class WeatherWidget extends UIComponent {
             contentElement.innerHTML = `
                 <div class="weather-widget__error">
                     <div class="weather-widget__error-icon">⚠️</div>
-                    <div class="weather-widget__error-message">${message}</div>
+                    <div class="weather-widget__error-message">${this.escapeHtml(message)}</div>
                     <button class="weather-widget__retry-btn btn btn--secondary" style="margin-top: 10px">
                         Попробовать снова
                     </button>
