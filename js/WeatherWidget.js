@@ -23,6 +23,18 @@ export class WeatherWidget extends UIComponent {
         this.abortController = null;
     }
 
+    // --- ОБЯЗАТЕЛЬНО: Переопределяем render(), если UIComponent ожидает это ---
+    render() {
+        // Сначала вызываем родительский render()
+        super.render();
+
+        // Затем добавляем своё содержимое
+        this.updateDisplay();
+        this.bindEvents();
+
+        return this.element;
+    }
+
     initialize() {
         this.startAutoRefresh();
         
@@ -33,6 +45,7 @@ export class WeatherWidget extends UIComponent {
         }, 1000);
     }
 
+    // --- Ключевой метод: возвращает только содержимое для .widget__content ---
     renderContent() {
         return `
             <div class="weather-widget__location">
@@ -163,9 +176,6 @@ export class WeatherWidget extends UIComponent {
         }
     }
 
-    // --- Остальные методы остаются почти без изменений ---
-    // (fetchWeatherData, tryAllApiKeys, useDemoData, getWeatherIcon и т.д.)
-
     startAutoRefresh() {
         this.stopAutoRefresh();
         this.autoRefreshInterval = setInterval(() => {
@@ -189,7 +199,7 @@ export class WeatherWidget extends UIComponent {
         if (this.abortController) this.abortController.abort();
 
         this.isLoading = true;
-        this.updateDisplay();
+        this.updateDisplay(); // ← ВАЖНО: обновляем содержимое
 
         this.abortController = new AbortController();
 
@@ -209,14 +219,15 @@ export class WeatherWidget extends UIComponent {
         } finally {
             this.isLoading = false;
             this.abortController = null;
-            this.updateDisplay();
+            this.updateDisplay(); // ← Обновляем ещё раз после загрузки
         }
     }
 
     updateDisplay() {
-        const content = this.element?.querySelector('.widget__content');
-        if (content) {
-            content.innerHTML = this.renderContent();
+        // Найти контейнер для содержимого — это должен быть .widget__content
+        const contentContainer = this.element?.querySelector('.widget__content');
+        if (contentContainer) {
+            contentContainer.innerHTML = this.renderContent();
             this.bindEvents();
         }
     }
