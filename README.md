@@ -4,7 +4,7 @@
 
 ## 🚀 Демо
 
-[Посмотреть на GitHub Pages]([(https://seylor-mooshka.github.io/Dashboard/)])
+Посмотреть на GitHub Pages: https://seylor-mooshka.github.io/Dashboard/
 
 ## ✨ Особенности
 
