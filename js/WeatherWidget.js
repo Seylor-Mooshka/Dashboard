@@ -2,12 +2,12 @@ import { UIComponent } from './UIComponent.js';
 
 export class WeatherWidget extends UIComponent {
     constructor(config = {}) {
-        super({
+        super({ 
             ...config,
             title: config.title || '🌤️ Погода',
             className: 'weather-widget'
         });
-
+        
         this.weatherData = config.weatherData || null;
         this.location = config.location || 'Moscow';
         this.apiKeys = [
@@ -25,7 +25,7 @@ export class WeatherWidget extends UIComponent {
 
     initialize() {
         this.startAutoRefresh();
-
+        
         this.fetchTimeout = setTimeout(() => {
             if (!this.isLoading) {
                 this.fetchWeatherData();
@@ -34,48 +34,51 @@ export class WeatherWidget extends UIComponent {
     }
 
     renderContent() {
-        const currentWeather = this.weatherData ? this.renderCurrentWeather() : this.renderLoading();
-        const forecast = this.weatherData ? this.renderForecast() : '';
-
         return `
-            <div class="widget-header">
-                <h3>🌤️ Погода</h3>
-                <div class="widget-controls">
-                    <button class="control-btn minimize-btn">−</button>
-                    <button class="control-btn close-btn">×</button>
-                </div>
+            <div class="weather-widget__location">
+                <input 
+                    type="text" 
+                    class="weather-widget__city-input" 
+                    placeholder="Введите город" 
+                    value="${this.location}"
+                />
+                <button class="weather-widget__search-btn">🔍</button>
             </div>
 
-            <div class="widget-content">
-                <div class="section-title">Текущая погода</div>
+            <div class="weather-widget__content">
+                ${this.isLoading ? this.renderLoading() : this.renderWeather()}
+            </div>
 
-                ${currentWeather}
+            <div class="weather-widget__actions">
+                <button class="widget__btn weather-widget__refresh-btn">
+                    ${this.isLoading ? '🔄 Загрузка...' : '🔄 Обновить'}
+                </button>
+            </div>
 
-                ${forecast}
-
-                <div class="refresh-section">
-                    <button class="refresh-button">
-                        <span>🔄</span> Обновить
-                    </button>
-                </div>
-
-                <div class="update-info">
-                    Обновлено: ${this.renderUpdateInfo()}
-                </div>
+            <div class="weather-widget__info">
+                <small>${this.renderUpdateInfo()}</small>
             </div>
         `;
     }
 
     renderLoading() {
         return `
-            <div class="loading-state">
-                <div class="spinner">🔄</div>
-                <div>Загрузка данных...</div>
+            <div class="weather-widget__loading">
+                <div class="weather-widget__spinner"></div>
+                <div class="weather-widget__placeholder">Загрузка погоды...</div>
             </div>
         `;
     }
 
-    renderCurrentWeather() {
+    renderWeather() {
+        if (!this.weatherData) {
+            return `
+                <div class="weather-widget__loading">
+                    <div class="weather-widget__placeholder">Нет данных о погоде</div>
+                </div>
+            `;
+        }
+
         const temp = Math.round(this.weatherData.main.temp);
         const feelsLike = Math.round(this.weatherData.main.feels_like);
         const description = this.weatherData.weather[0].description;
@@ -83,63 +86,55 @@ export class WeatherWidget extends UIComponent {
         const city = this.weatherData.name;
 
         return `
-            <div class="weather-item">
-                <div class="icon-and-temp">
-                    <span class="weather-icon">${icon}</span>
-                    <div class="temp-large">${temp}°C</div>
-                </div>
-                <div class="weather-details">
-                    <div class="city-name">📍 ${city}</div>
-                    <div class="weather-desc">${description}</div>
-                    <div class="feels-like">Ощущается как ${feelsLike}°C</div>
-                </div>
+            <div class="weather-widget__main">
+                <div class="weather-widget__temperature">${temp}°C</div>
+                <div class="weather-widget__description">${description}</div>
+                <div class="weather-widget__location-name">📍 ${city}</div>
             </div>
-        `;
-    }
 
-    renderForecast() {
-        const forecasts = [
-            { time: '+3ч', temp: Math.round(this.weatherData.main.temp + 1), icon: this.getWeatherIcon(this.weatherData.weather[0].main) },
-            { time: '+6ч', temp: Math.round(this.weatherData.main.temp - 1), icon: this.getForecastIcon(this.weatherData.weather[0].main, 6) },
-            { time: '+12ч', temp: Math.round(this.weatherData.main.temp - 2), icon: this.getForecastIcon(this.weatherData.weather[0].main, 12) }
-        ];
-
-        return `
-            <div class="forecast-section">
-                <div class="section-title">Прогноз на день</div>
-                ${forecasts.map(f => `
-                    <div class="forecast-item">
-                        <span class="time">${f.time}</span>
-                        <span class="icon">${f.icon}</span>
-                        <span class="temp">${f.temp}°</span>
-                    </div>
-                `).join('')}
+            <div class="weather-widget__details">
+                <div class="weather-widget__detail">
+                    <span class="weather-widget__label">Ощущается как</span>
+                    <span class="weather-widget__value">${feelsLike}°C</span>
+                </div>
+                <div class="weather-widget__detail">
+                    <span class="weather-widget__label">Влажность</span>
+                    <span class="weather-widget__value">${this.weatherData.main.humidity}%</span>
+                </div>
+                <div class="weather-widget__detail">
+                    <span class="weather-widget__label">Ветер</span>
+                    <span class="weather-widget__value">${this.weatherData.wind.speed} м/с</span>
+                </div>
+                <div class="weather-widget__detail">
+                    <span class="weather-widget__label">Давление</span>
+                    <span class="weather-widget__value">${Math.round(this.weatherData.main.pressure * 0.75)} мм</span>
+                </div>
             </div>
         `;
     }
 
     renderUpdateInfo() {
-        if (!this.lastUpdate) return '...';
+        if (!this.lastUpdate) return 'Обновляется...';
         
         const now = new Date();
         const updateTime = new Date(this.lastUpdate);
         const diffMinutes = Math.floor((now - updateTime) / 60000);
         
         if (diffMinutes < 1) {
-            return 'только что';
+            return 'Обновлено: только что';
         } else if (diffMinutes < 60) {
-            return `${diffMinutes} мин назад`;
+            return `Обновлено: ${diffMinutes} мин назад`;
         } else {
-            return updateTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            return `Обновлено: ${updateTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
         }
     }
 
     bindEvents() {
         super.bindEvents();
 
-        const refreshBtn = this.element?.querySelector('.refresh-button');
-        const minimizeBtn = this.element?.querySelector('.minimize-btn');
-        const closeBtn = this.element?.querySelector('.close-btn');
+        const refreshBtn = this.element?.querySelector('.weather-widget__refresh-btn');
+        const searchBtn = this.element?.querySelector('.weather-widget__search-btn');
+        const cityInput = this.element?.querySelector('.weather-widget__city-input');
 
         if (refreshBtn) {
             this.addListener(refreshBtn, 'click', () => {
@@ -147,25 +142,34 @@ export class WeatherWidget extends UIComponent {
             });
         }
 
-        if (minimizeBtn) {
-            this.addListener(minimizeBtn, 'click', () => {
-                this.minimize();
+        if (searchBtn) {
+            this.addListener(searchBtn, 'click', () => {
+                if (cityInput && cityInput.value.trim()) {
+                    this.location = cityInput.value.trim();
+                    this.stopAutoRefresh();
+                    this.fetchWeatherData();
+                    this.startAutoRefresh();
+                }
             });
         }
 
-        if (closeBtn) {
-            this.addListener(closeBtn, 'click', () => {
-                this.close();
+        if (cityInput) {
+            this.addListener(cityInput, 'keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchBtn.click();
+                }
             });
         }
     }
 
+    // --- Остальные методы остаются почти без изменений ---
+    // (fetchWeatherData, tryAllApiKeys, useDemoData, getWeatherIcon и т.д.)
+
     startAutoRefresh() {
         this.stopAutoRefresh();
-        
         this.autoRefreshInterval = setInterval(() => {
-            if (this.isLoading) return;
-            this.fetchWeatherData();
+            if (!this.isLoading) this.fetchWeatherData();
         }, this.refreshInterval);
     }
 
@@ -174,7 +178,6 @@ export class WeatherWidget extends UIComponent {
             clearInterval(this.autoRefreshInterval);
             this.autoRefreshInterval = null;
         }
-        
         if (this.fetchTimeout) {
             clearTimeout(this.fetchTimeout);
             this.fetchTimeout = null;
@@ -183,77 +186,53 @@ export class WeatherWidget extends UIComponent {
 
     async fetchWeatherData() {
         if (this.isLoading) return;
-        
-        if (this.abortController) {
-            this.abortController.abort();
-        }
-        
+        if (this.abortController) this.abortController.abort();
+
         this.isLoading = true;
-        this.updateRefreshButton();
-        
+        this.updateDisplay();
+
         this.abortController = new AbortController();
-        
+
         try {
             const data = await this.tryAllApiKeys();
-            
             if (data) {
                 this.weatherData = data;
                 this.lastUpdate = Date.now();
             } else {
-                throw new Error('Все API ключи нерабочие');
+                throw new Error('API keys failed');
             }
-            
         } catch (error) {
             if (error.name === 'AbortError') return;
-            
-            console.error('Weather API error:', error);
+            console.error('Weather fetch error:', error);
             this.useDemoData();
             this.lastUpdate = Date.now();
         } finally {
             this.isLoading = false;
             this.abortController = null;
-            
-            if (this.element) {
-                this.updateDisplay();
-            }
+            this.updateDisplay();
         }
     }
 
-    updateRefreshButton() {
-        const refreshBtn = this.element?.querySelector('.refresh-button');
-        if (refreshBtn) {
-            if (this.isLoading) {
-                refreshBtn.disabled = true;
-                refreshBtn.innerHTML = '<span>🔄</span> Загрузка...';
-            } else {
-                refreshBtn.disabled = false;
-                refreshBtn.innerHTML = '<span>🔄</span> Обновить';
-            }
+    updateDisplay() {
+        const content = this.element?.querySelector('.widget__content');
+        if (content) {
+            content.innerHTML = this.renderContent();
+            this.bindEvents();
         }
     }
 
     async tryAllApiKeys() {
         const signal = this.abortController?.signal;
-        
         for (let i = 0; i < this.apiKeys.length; i++) {
-            if (signal?.aborted) {
-                throw new DOMException('Aborted', 'AbortError');
-            }
-            
+            if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
             try {
-                this.currentApiKeyIndex = i;
-                const apiKey = this.apiKeys[i];
-                
                 const response = await fetch(
-                    `https://api.openweathermap.org/data/2.5/weather?q=${this.location}&units=metric&appid=${apiKey}&lang=ru`,
+                    `https://api.openweathermap.org/data/2.5/weather?q=${this.location}&units=metric&appid=${this.apiKeys[i]}&lang=ru`,
                     { signal }
                 );
-                
-                if (response.ok) {
-                    return await response.json();
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') throw error;
+                if (response.ok) return await response.json();
+            } catch (e) {
+                if (e.name === 'AbortError') throw e;
             }
         }
         return null;
@@ -265,86 +244,26 @@ export class WeatherWidget extends UIComponent {
                 temp: 18 + Math.random() * 8,
                 feels_like: 16 + Math.random() * 10,
                 humidity: 40 + Math.random() * 40,
-                pressure: 1013,
-                temp_min: 15 + Math.random() * 5,
-                temp_max: 20 + Math.random() * 10
+                pressure: 1013
             },
             weather: [{
                 main: ['Clear', 'Clouds', 'Rain'][Math.floor(Math.random() * 3)],
-                description: ['ясно', 'облачно', 'небольшой дождь'][Math.floor(Math.random() * 3)]
+                description: ['ясно', 'облачно', 'дождь'][Math.floor(Math.random() * 3)]
             }],
-            wind: {
-                speed: (1 + Math.random() * 7).toFixed(1)
-            },
+            wind: { speed: (1 + Math.random() * 7).toFixed(1) },
             visibility: 10000,
-            name: this.location,
-            sys: {
-                country: 'RU'
-            }
+            name: this.location
         };
-    }
-
-    updateDisplay() {
-        const container = this.element?.querySelector('.widget-content');
-        if (container) {
-            container.innerHTML = this.renderContent().split('</div>')[1]; // Только содержимое
-            this.bindEvents();
-        }
     }
 
     getWeatherIcon(weatherType) {
-        const icons = {
-            'Clear': '☀️',
-            'Clouds': '🌤️',
-            'Rain': '🌧️',
-            'Snow': '❄️',
-            'Thunderstorm': '⛈️',
-            'Drizzle': '🌦️',
-            'Mist': '🌫️',
-            'Fog': '🌫️'
-        };
+        const icons = { Clear: '☀️', Clouds: '🌤️', Rain: '🌧️', Snow: '❄️', Thunderstorm: '⛈️', Drizzle: '🌦️', Mist: '🌫️', Fog: '🌫️' };
         return icons[weatherType] || '🌤️';
-    }
-
-    getForecastIcon(weatherType, hours) {
-        if (hours >= 18 || hours <= 6) {
-            const nightIcons = {
-                'Clear': '🌙',
-                'Clouds': '☁️',
-                'Rain': '🌧️',
-                'Snow': '❄️'
-            };
-            return nightIcons[weatherType] || '🌙';
-        }
-        return this.getWeatherIcon(weatherType);
-    }
-
-    refresh() {
-        if (!this.isLoading) {
-            this.fetchWeatherData();
-        }
     }
 
     destroy() {
         this.stopAutoRefresh();
-        
-        if (this.abortController) {
-            this.abortController.abort();
-            this.abortController = null;
-        }
-        
+        if (this.abortController) this.abortController.abort();
         super.destroy();
-    }
-
-    minimize() {
-        this.element.style.display = 'none';
-        // Можно добавить логику восстановления
-    }
-
-    close() {
-        this.destroy();
-        if (this.element && this.element.parentNode) {
-            this.element.parentNode.removeChild(this.element);
-        }
     }
 }
