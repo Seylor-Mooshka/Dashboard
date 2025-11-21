@@ -8,7 +8,7 @@ export class CryptoWidget extends UIComponent {
     constructor(config = {}) {
         super({
             ...config,
-            title: config.title || '💰 Крипта',
+            title: config.title || '💰 Криптовалюта',
             type: 'crypto'
         });
         
@@ -270,7 +270,7 @@ export class CryptoWidget extends UIComponent {
      */
     getCryptoInfo(id) {
         const cryptoMap = {
-            bitcoin: { name: 'Bitcoin', symbol: 'btc', emoji: '₿' },
+            bitcoin: { name: 'Bitcoin', symbol: 'btc', emoji: 'Б' },
             ethereum: { name: 'Ethereum', symbol: 'eth', emoji: 'Ξ' },
             binancecoin: { name: 'BNB', symbol: 'bnb', emoji: '🟡' },
             cardano: { name: 'Cardano', symbol: 'ada', emoji: '🔵' },
