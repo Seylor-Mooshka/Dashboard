@@ -17,10 +17,18 @@ export class WeatherWidget extends UIComponent {
         this.isLoading = false;
         this.lastUpdate = null;
         this.updateInterval = 10 * 60 * 1000; // 10 минут
+        this.updateTimer = null;
         
-        // API ключ для OpenWeatherMap (в реальном проекте должен быть в переменных окружения)
-        this.apiKey = 'f6392c735d2b68f57323a6903c8a85f9'; // Для демо используем demo ключ
+        // API ключ для OpenWeatherMap
+        this.apiKey = 'f6392c735d2b68f57323a6903c8a85f9';
         this.apiUrl = 'https://api.openweathermap.org/data/2.5/weather';
+    }
+
+    /**
+     * Формирует URL для запроса к OpenWeatherMap API
+     */
+    getApiUrl() {
+        return `${this.apiUrl}?q=${encodeURIComponent(this.city)}&appid=${this.apiKey}&units=metric&lang=ru`;
     }
 
     /**
@@ -87,6 +95,7 @@ export class WeatherWidget extends UIComponent {
 
         const { main, weather, wind } = this.weatherData;
         const weatherInfo = weather[0];
+        const feelsLike = main.feels_like !== undefined ? Math.round(main.feels_like) : Math.round(main.temp);
 
         return `
             <div class="weather-widget__main">
@@ -101,7 +110,7 @@ export class WeatherWidget extends UIComponent {
             <div class="weather-widget__details">
                 <div class="weather-widget__detail">
                     <span class="weather-widget__label">Ощущается как:</span>
-                    <span class="weather-widget__value">${Math.round(main.feels_like)}°C</span>
+                    <span class="weather-widget__value">${feelsLike}°C</span>
                 </div>
                 <div class="weather-widget__detail">
                     <span class="weather-widget__label">Влажность:</span>
@@ -165,34 +174,68 @@ export class WeatherWidget extends UIComponent {
         this.update();
 
         try {
-            // Для демо используем моковые данные, так как API требует регистрации
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Имитация загрузки
+            // Запрос к реальному API OpenWeatherMap
+            const response = await fetch(this.getApiUrl());
             
-            // Моковые данные для демонстрации
-            this.weatherData = {
-                main: {
-                    temp: Math.round(Math.random() * 30 - 10), // -10 до 20°C
-                    feels_like: Math.round(Math.random() * 30 - 10),
-                    humidity: Math.round(Math.random() * 40 + 40), // 40-80%
-                    pressure: Math.round(Math.random() * 50 + 1000) // 1000-1050 гПа
-                },
-                weather: [{
-                    main: ['Clear', 'Clouds', 'Rain', 'Snow'][Math.floor(Math.random() * 4)],
-                    description: ['ясно', 'облачно', 'дождь', 'снег'][Math.floor(Math.random() * 4)]
-                }],
-                wind: {
-                    speed: Math.round(Math.random() * 10) // 0-10 м/с
-                }
-            };
+            // Обработка различных статусов ответа
+            if (response.status === 401) {
+                throw new Error('Неверный API ключ');
+            }
+            
+            if (response.status === 404) {
+                throw new Error('Город не найден');
+            }
+            
+            if (response.status === 429) {
+                throw new Error('Превышен лимит запросов. Попробуйте через несколько минут.');
+            }
+            
+            if (!response.ok) {
+                throw new Error(`Ошибка загрузки данных: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Проверка структуры данных
+            if (!data.main || !data.weather || !data.wind) {
+                throw new Error('Некорректный ответ от сервера');
+            }
 
+            this.weatherData = data;
             this.lastUpdate = new Date();
-
+            
         } catch (error) {
             console.error('Ошибка загрузки данных о погоде:', error);
+            this.showError(error.message || 'Не удалось загрузить данные о погоде');
             this.weatherData = null;
         } finally {
             this.isLoading = false;
             this.update();
+        }
+    }
+
+    /**
+     * Отображает сообщение об ошибке
+     */
+    showError(message) {
+        if (!this.element) return;
+        
+        const contentElement = this.element.querySelector('.weather-widget__content');
+        if (contentElement) {
+            contentElement.innerHTML = `
+                <div class="weather-widget__error">
+                    <div class="weather-widget__error-icon">⚠️</div>
+                    <div class="weather-widget__error-message">${message}</div>
+                    <button class="weather-widget__retry-btn btn btn--secondary" style="margin-top: 10px">
+                        Попробовать снова
+                    </button>
+                </div>
+            `;
+            
+            const retryBtn = contentElement.querySelector('.weather-widget__retry-btn');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', () => this.loadWeather());
+            }
         }
     }
 
@@ -204,11 +247,18 @@ export class WeatherWidget extends UIComponent {
             'Clear': '☀️',
             'Clouds': '☁️',
             'Rain': '🌧️',
+            'Drizzle': '🌦️',
             'Snow': '❄️',
             'Thunderstorm': '⛈️',
-            'Drizzle': '🌦️',
             'Mist': '🌫️',
-            'Fog': '🌫️'
+            'Fog': '🌫️',
+            'Smoke': '🌫️',
+            'Haze': '🌫️',
+            'Dust': '💨',
+            'Sand': '💨',
+            'Ash': '🌋',
+            'Squall': '💨',
+            'Tornado': '🌪️'
         };
         return emojiMap[weatherMain] || '🌤️';
     }
@@ -237,9 +287,7 @@ export class WeatherWidget extends UIComponent {
      * Запускает автоматическое обновление
      */
     startAutoUpdate() {
-        if (this.updateTimer) {
-            clearInterval(this.updateTimer);
-        }
+        this.stopAutoUpdate();
         
         this.updateTimer = setInterval(() => {
             this.loadWeather();
