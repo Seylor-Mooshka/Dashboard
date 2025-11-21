@@ -8,7 +8,7 @@ export class CryptoWidget extends UIComponent {
     constructor(config = {}) {
         super({
             ...config,
-            title: config.title || '💰 Криптовалюта',
+            title: config.title || '💰 Криптовалюты',
             type: 'crypto'
         });
         
@@ -22,7 +22,7 @@ export class CryptoWidget extends UIComponent {
         this.baseApiUrl = 'https://api.coingecko.com/api/v3/simple/price';
         this.cryptoIds = ['bitcoin', 'ethereum', 'binancecoin', 'cardano', 'solana'];
         this.currency = 'usd';
-        this.useMock = false; // Отключаем моковые данные по умолчанию
+        this.useMock = false; // Моковые данные полностью отключены
     }
 
     /**
@@ -32,7 +32,7 @@ export class CryptoWidget extends UIComponent {
         const ids = this.cryptoIds.join(',');
         const currencies = this.currency;
         // Добавляем timestamp для обхода кэширования
-        return `${this.baseApiUrl}?ids=${ids}&vs_currencies=${currencies}&include_24hr_change=true&ts=${Date.now()}`;
+        return `${this.baseApiUrl}?ids=${ids}&vs_currencies=${currencies}&include_24hr_change=true`;
     }
 
     /**
@@ -164,68 +164,27 @@ export class CryptoWidget extends UIComponent {
         this.update();
 
         try {
-            let data;
-
-            if (this.useMock) {
-                // Используем моковые данные только для разработки
-                await new Promise(resolve => setTimeout(resolve, 800));
-                
-                data = {
-                    bitcoin: {
-                        usd: 95000 + (Math.random() - 0.5) * 5000,
-                        eur: 87000 + (Math.random() - 0.5) * 4000,
-                        rub: 9500000 + (Math.random() - 0.5) * 500000,
-                        usd_24h_change: (Math.random() - 0.3) * 10,
-                        eur_24h_change: (Math.random() - 0.3) * 10,
-                        rub_24h_change: (Math.random() - 0.3) * 10
-                    },
-                    ethereum: {
-                        usd: 3200 + (Math.random() - 0.5) * 500,
-                        eur: 2900 + (Math.random() - 0.5) * 400,
-                        rub: 320000 + (Math.random() - 0.5) * 30000,
-                        usd_24h_change: (Math.random() - 0.3) * 15,
-                        eur_24h_change: (Math.random() - 0.3) * 15,
-                        rub_24h_change: (Math.random() - 0.3) * 15
-                    },
-                    binancecoin: {
-                        usd: 580 + (Math.random() - 0.5) * 100,
-                        eur: 520 + (Math.random() - 0.5) * 80,
-                        rub: 58000 + (Math.random() - 0.5) * 10000,
-                        usd_24h_change: (Math.random() - 0.3) * 20,
-                        eur_24h_change: (Math.random() - 0.3) * 20,
-                        rub_24h_change: (Math.random() - 0.3) * 20
-                    },
-                    cardano: {
-                        usd: 0.65 + (Math.random() - 0.5) * 0.2,
-                        eur: 0.58 + (Math.random() - 0.5) * 0.15,
-                        rub: 65 + (Math.random() - 0.5) * 10,
-                        usd_24h_change: (Math.random() - 0.3) * 25,
-                        eur_24h_change: (Math.random() - 0.3) * 25,
-                        rub_24h_change: (Math.random() - 0.3) * 25
-                    },
-                    solana: {
-                        usd: 180 + (Math.random() - 0.5) * 40,
-                        eur: 160 + (Math.random() - 0.5) * 30,
-                        rub: 18000 + (Math.random() - 0.5) * 4000,
-                        usd_24h_change: (Math.random() - 0.3) * 30,
-                        eur_24h_change: (Math.random() - 0.3) * 30,
-                        rub_24h_change: (Math.random() - 0.3) * 30
-                    }
-                };
-            } else {
-                // Запрос к реальному API CoinGecko
-                const response = await fetch(this.getApiUrl());
-                
-                // Обработка ошибок API
-                if (response.status === 429) {
-                    throw new Error('Слишком много запросов. Попробуйте через минуту.');
-                }
-                
-                if (!response.ok) {
-                    throw new Error(`Ошибка API: ${response.status}`);
-                }
-                
-                data = await response.json();
+            // Запрос к реальному API CoinGecko
+            const response = await fetch(this.getApiUrl());
+            
+            // Анализируем статус ответа
+            if (response.status === 403) {
+                throw new Error('Доступ к API запрещен. Попробуйте обновить страницу.');
+            }
+            
+            if (response.status === 429) {
+                throw new Error('Слишком много запросов. Попробуйте через минуту.');
+            }
+            
+            if (!response.ok) {
+                throw new Error(`Ошибка API: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // Проверка структуры данных
+            if (!data || Object.keys(data).length === 0) {
+                throw new Error('Получен пустой ответ от API');
             }
 
             this.cryptoData = data;
@@ -270,7 +229,7 @@ export class CryptoWidget extends UIComponent {
      */
     getCryptoInfo(id) {
         const cryptoMap = {
-            bitcoin: { name: 'Bitcoin', symbol: 'btc', emoji: 'Б' },
+            bitcoin: { name: 'Bitcoin', symbol: 'btc', emoji: '₿' },
             ethereum: { name: 'Ethereum', symbol: 'eth', emoji: 'Ξ' },
             binancecoin: { name: 'BNB', symbol: 'bnb', emoji: '🟡' },
             cardano: { name: 'Cardano', symbol: 'ada', emoji: '🔵' },
@@ -328,6 +287,7 @@ export class CryptoWidget extends UIComponent {
      */
     async initialize() {
         await this.loadCryptoData();
+        // Загружаем данные сразу при инициализации
         this.startAutoUpdate();
     }
 
