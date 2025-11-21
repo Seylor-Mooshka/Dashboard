@@ -20,7 +20,7 @@ export class WeatherWidget extends UIComponent {
         this.updateTimer = null;
         
         // API ключ для OpenWeatherMap
-        this.apiKey = 'f6392c735d2b68f57323a6903c8a85f9';
+        this.apiKey = '7f958b5c29d990879d16c1b7bd590b5e';
         // Используем прокси для обхода CORS на GitHub Pages
         this.proxyUrl = 'https://corsproxy.io/?';
         this.apiUrl = 'https://api.openweathermap.org/data/2.5/weather';
