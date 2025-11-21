@@ -1,9 +1,5 @@
 import { UIComponent } from './UIComponent.js';
 
-/**
- * Виджет для отображения погоды
- * Получает данные с внешнего API OpenWeatherMap
- */
 export class WeatherWidget extends UIComponent {
     constructor(config = {}) {
         super({
@@ -12,8 +8,8 @@ export class WeatherWidget extends UIComponent {
             type: 'weather'
         });
         
-        this.city = config.city || 'Москва';
         this.weatherData = null;
+        this.city = config.city || 'Москва';
         this.isLoading = false;
         this.lastUpdate = null;
         this.updateInterval = 10 * 60 * 1000; // 10 минут
@@ -39,36 +35,36 @@ export class WeatherWidget extends UIComponent {
      */
     renderContent() {
         return `
-            <div class="weather-widget">
-                <div class="widget-header">
-                    <h3 class="widget-title">🌤️ Погода</h3>
-                    <div class="widget-controls">
-                        <div class="weather-location">
-                            <input 
-                                type="text" 
-                                class="weather-widget__city-input" 
-                                value="${this.escapeHtml(this.city)}"
-                                placeholder="Город"
-                                maxlength="30"
-                            >
-                        </div>
-                        <button class="weather-widget__search-btn btn btn--primary" style="margin-left: 5px">
+            <div class="crypto-widget">
+                <div class="crypto-widget__header">
+                    <h4>🌤️ Погода в ${this.escapeHtml(this.city)}</h4>
+                    <div class="crypto-widget__controls">
+                        <input 
+                            type="text" 
+                            class="weather-widget__city-input" 
+                            placeholder="Город"
+                            value="${this.escapeHtml(this.city)}"
+                            maxlength="30"
+                        >
+                        <button class="weather-widget__search-btn btn btn--primary">
                             🔍
-                        </button>
-                        <button class="weather-widget__refresh-btn btn btn--secondary" 
-                                style="margin-left: 5px" ${this.isLoading ? 'disabled' : ''}>
-                            ${this.isLoading ? '⏳' : '🔄'}
                         </button>
                     </div>
                 </div>
                 
-                <div class="weather-widget__content">
+                <div class="crypto-widget__content">
                     ${this.isLoading ? this.renderLoading() : this.renderWeather()}
                 </div>
                 
+                <div class="crypto-widget__actions">
+                    <button class="crypto-widget__refresh-btn btn btn--primary" ${this.isLoading ? 'disabled' : ''}>
+                        ${this.isLoading ? '⏳ Загрузка...' : '🔄 Обновить'}
+                    </button>
+                </div>
+                
                 ${this.lastUpdate ? `
-                    <div class="weather-widget__info" style="padding: 10px 15px; font-size: 0.85rem; color: var(--text-secondary);">
-                        <small>Обновлено: ${this.formatTime(this.lastUpdate)}</small>
+                    <div class="crypto-widget__info">
+                        <small>Обновлено: ${this.formatDateTime(this.lastUpdate)}</small>
                     </div>
                 ` : ''}
             </div>
@@ -93,9 +89,9 @@ export class WeatherWidget extends UIComponent {
      */
     renderLoading() {
         return `
-            <div class="crypto-widget__loading" style="padding: 20px 0; text-align: center;">
-                <div class="weather-widget__spinner" style="margin: 0 auto 15px; width: 40px; height: 40px;"></div>
-                <p>Загрузка данных о погоде...</p>
+            <div class="crypto-widget__loading">
+                <div class="crypto-widget__spinner"></div>
+                <p>Получаем данные о погоде...</p>
             </div>
         `;
     }
@@ -106,7 +102,7 @@ export class WeatherWidget extends UIComponent {
     renderWeather() {
         if (!this.weatherData) {
             return `
-                <div class="weather-widget__placeholder" style="padding: 20px 15px; text-align: center; color: var(--text-secondary);">
+                <div class="crypto-widget__placeholder">
                     <p>Нажмите "Обновить" чтобы получить данные о погоде</p>
                 </div>
             `;
@@ -118,33 +114,37 @@ export class WeatherWidget extends UIComponent {
         const humidity = main.humidity;
         const pressure = Math.round(main.pressure * 0.75);
         const windSpeed = Math.round(wind.speed);
+        const icon = this.getWeatherIcon(weatherInfo.main);
+        const description = weatherInfo.description;
+        const temp = Math.round(main.temp);
 
         return `
-            <div class="weather-widget__main" style="padding: 15px 0;">
-                <div class="weather-widget__temperature" style="font-size: 2.2rem; text-align: center; margin-bottom: 10px;">
-                    ${Math.round(main.temp)}°C
+            <div class="weather-widget__main">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="font-size: 2.2rem; font-weight: 600;">${temp}°C</div>
+                    <div style="font-size: 2rem;">${icon}</div>
                 </div>
-                <div class="weather-widget__description" style="text-align: center; margin-bottom: 20px;">
-                    ${this.getWeatherEmoji(weatherInfo.main)} ${weatherInfo.description}
+                <div style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-secondary);">
+                    ${this.escapeHtml(description)}
                 </div>
             </div>
             
-            <div class="weather-widget__details" style="padding: 0 15px 15px;">
-                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
-                    <span class="weather-widget__label" style="color: var(--text-secondary);">Ощущается как:</span>
-                    <span class="weather-widget__value">${feelsLike}°C</span>
+            <div class="crypto-widget__details">
+                <div class="crypto-widget__detail">
+                    <span class="crypto-widget__label">Ощущается как:</span>
+                    <span class="crypto-widget__value">${feelsLike}°C</span>
                 </div>
-                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
-                    <span class="weather-widget__label" style="color: var(--text-secondary);">Влажность:</span>
-                    <span class="weather-widget__value">${humidity}%</span>
+                <div class="crypto-widget__detail">
+                    <span class="crypto-widget__label">Влажность:</span>
+                    <span class="crypto-widget__value">${humidity}%</span>
                 </div>
-                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
-                    <span class="weather-widget__label" style="color: var(--text-secondary);">Давление:</span>
-                    <span class="weather-widget__value">${pressure} мм</span>
+                <div class="crypto-widget__detail">
+                    <span class="crypto-widget__label">Давление:</span>
+                    <span class="crypto-widget__value">${pressure} мм</span>
                 </div>
-                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0;">
-                    <span class="weather-widget__label" style="color: var(--text-secondary);">Ветер:</span>
-                    <span class="weather-widget__value">${windSpeed} м/с</span>
+                <div class="crypto-widget__detail">
+                    <span class="crypto-widget__label">Ветер:</span>
+                    <span class="crypto-widget__value">${windSpeed} м/с</span>
                 </div>
             </div>
         `;
@@ -180,7 +180,7 @@ export class WeatherWidget extends UIComponent {
         }
 
         // Обработчик обновления
-        const refreshBtn = this.element.querySelector('.weather-widget__refresh-btn');
+        const refreshBtn = this.element.querySelector('.crypto-widget__refresh-btn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.loadWeather());
         }
@@ -285,34 +285,31 @@ export class WeatherWidget extends UIComponent {
     /**
      * Возвращает эмодзи для типа погоды
      */
-    getWeatherEmoji(weatherMain) {
-        const emojiMap = {
+    getWeatherIcon(weatherMain) {
+        const icons = {
             'Clear': '☀️',
             'Clouds': '☁️',
             'Rain': '🌧️',
-            'Drizzle': '🌦️',
             'Snow': '❄️',
             'Thunderstorm': '⛈️',
+            'Drizzle': '🌦️',
             'Mist': '🌫️',
-            'Fog': '🌫️',
-            'Smoke': '🌫️',
-            'Haze': '🌫️',
-            'Dust': '💨',
-            'Sand': '💨',
-            'Ash': '🌋',
-            'Squall': '💨',
-            'Tornado': '🌪️'
+            'Fog': '🌫️'
         };
-        return emojiMap[weatherMain] || '🌤️';
+        return icons[weatherMain] || '🌤️';
     }
 
     /**
-     * Форматирует время для отображения
+     * Форматирует дату и время для отображения
      */
-    formatTime(date) {
-        return date.toLocaleTimeString('ru-RU', {
+    formatDateTime(date) {
+        return date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            second: '2-digit'
         });
     }
 
