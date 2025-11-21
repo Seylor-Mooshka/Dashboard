@@ -40,32 +40,35 @@ export class WeatherWidget extends UIComponent {
     renderContent() {
         return `
             <div class="weather-widget">
-                <div class="weather-widget__location">
-                    <input 
-                        type="text" 
-                        class="weather-widget__city-input" 
-                        placeholder="Введите город"
-                        value="${this.escapeHtml(this.city)}"
-                        maxlength="50"
-                    >
-                    <button class="weather-widget__search-btn btn btn--primary">
-                        🔍
-                    </button>
+                <div class="widget-header">
+                    <h3 class="widget-title">🌤️ Погода</h3>
+                    <div class="widget-controls">
+                        <div class="weather-location">
+                            <input 
+                                type="text" 
+                                class="weather-widget__city-input" 
+                                value="${this.escapeHtml(this.city)}"
+                                placeholder="Город"
+                                maxlength="30"
+                            >
+                        </div>
+                        <button class="weather-widget__search-btn btn btn--primary" style="margin-left: 5px">
+                            🔍
+                        </button>
+                        <button class="weather-widget__refresh-btn btn btn--secondary" 
+                                style="margin-left: 5px" ${this.isLoading ? 'disabled' : ''}>
+                            ${this.isLoading ? '⏳' : '🔄'}
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="weather-widget__content">
                     ${this.isLoading ? this.renderLoading() : this.renderWeather()}
                 </div>
                 
-                <div class="weather-widget__actions">
-                    <button class="weather-widget__refresh-btn btn btn--secondary" ${this.isLoading ? 'disabled' : ''}>
-                        ${this.isLoading ? '⏳ Загрузка...' : '🔄 Обновить'}
-                    </button>
-                </div>
-                
                 ${this.lastUpdate ? `
-                    <div class="weather-widget__info">
-                        <small>${this.isGitHubPages ? 'Демо-режим: ' : ''}Обновлено: ${this.formatTime(this.lastUpdate)}</small>
+                    <div class="weather-widget__info" style="padding: 10px 15px; font-size: 0.85rem; color: var(--text-secondary);">
+                        <small>Обновлено: ${this.formatTime(this.lastUpdate)}</small>
                     </div>
                 ` : ''}
             </div>
@@ -90,9 +93,9 @@ export class WeatherWidget extends UIComponent {
      */
     renderLoading() {
         return `
-            <div class="weather-widget__loading">
-                <div class="weather-widget__spinner"></div>
-                <p>${this.isGitHubPages ? 'Генерация данных...' : 'Получаем данные о погоде...'}</p>
+            <div class="crypto-widget__loading" style="padding: 20px 0; text-align: center;">
+                <div class="weather-widget__spinner" style="margin: 0 auto 15px; width: 40px; height: 40px;"></div>
+                <p>Загрузка данных о погоде...</p>
             </div>
         `;
     }
@@ -103,7 +106,7 @@ export class WeatherWidget extends UIComponent {
     renderWeather() {
         if (!this.weatherData) {
             return `
-                <div class="weather-widget__placeholder">
+                <div class="weather-widget__placeholder" style="padding: 20px 15px; text-align: center; color: var(--text-secondary);">
                     <p>Нажмите "Обновить" чтобы получить данные о погоде</p>
                 </div>
             `;
@@ -112,33 +115,36 @@ export class WeatherWidget extends UIComponent {
         const { main, weather, wind } = this.weatherData;
         const weatherInfo = weather[0];
         const feelsLike = main.feels_like !== undefined ? Math.round(main.feels_like) : Math.round(main.temp);
+        const humidity = main.humidity;
+        const pressure = Math.round(main.pressure * 0.75);
+        const windSpeed = Math.round(wind.speed);
 
         return `
-            <div class="weather-widget__main">
-                <div class="weather-widget__temperature">
+            <div class="weather-widget__main" style="padding: 15px 0;">
+                <div class="weather-widget__temperature" style="font-size: 2.2rem; text-align: center; margin-bottom: 10px;">
                     ${Math.round(main.temp)}°C
                 </div>
-                <div class="weather-widget__description">
-                    ${this.getWeatherEmoji(weatherInfo.main)} ${this.escapeHtml(weatherInfo.description)}
+                <div class="weather-widget__description" style="text-align: center; margin-bottom: 20px;">
+                    ${this.getWeatherEmoji(weatherInfo.main)} ${weatherInfo.description}
                 </div>
             </div>
             
-            <div class="weather-widget__details">
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Ощущается как:</span>
+            <div class="weather-widget__details" style="padding: 0 15px 15px;">
+                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                    <span class="weather-widget__label" style="color: var(--text-secondary);">Ощущается как:</span>
                     <span class="weather-widget__value">${feelsLike}°C</span>
                 </div>
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Влажность:</span>
-                    <span class="weather-widget__value">${Math.round(main.humidity)}%</span>
+                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                    <span class="weather-widget__label" style="color: var(--text-secondary);">Влажность:</span>
+                    <span class="weather-widget__value">${humidity}%</span>
                 </div>
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Давление:</span>
-                    <span class="weather-widget__value">${Math.round(main.pressure * 0.75)} мм рт.ст.</span>
+                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                    <span class="weather-widget__label" style="color: var(--text-secondary);">Давление:</span>
+                    <span class="weather-widget__value">${pressure} мм</span>
                 </div>
-                <div class="weather-widget__detail">
-                    <span class="weather-widget__label">Ветер:</span>
-                    <span class="weather-widget__value">${Math.round(wind.speed)} м/с</span>
+                <div class="weather-widget__detail" style="display: flex; justify-content: space-between; padding: 8px 0;">
+                    <span class="weather-widget__label" style="color: var(--text-secondary);">Ветер:</span>
+                    <span class="weather-widget__value">${windSpeed} м/с</span>
                 </div>
             </div>
         `;
