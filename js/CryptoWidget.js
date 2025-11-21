@@ -8,7 +8,7 @@ export class CryptoWidget extends UIComponent {
     constructor(config = {}) {
         super({
             ...config,
-            title: config.title || '💰 Криптовалюты',
+            title: config.title || '💰 Крипта',
             type: 'crypto'
         });
         
