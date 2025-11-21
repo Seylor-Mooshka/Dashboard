@@ -19,7 +19,7 @@ export class WeatherWidget extends UIComponent {
         this.updateInterval = 10 * 60 * 1000; // 10 минут
         
         // API ключ для OpenWeatherMap (в реальном проекте должен быть в переменных окружения)
-        this.apiKey = 'demo'; // Для демо используем demo ключ
+        this.apiKey = 'f6392c735d2b68f57323a6903c8a85f9'; // Для демо используем demo ключ
         this.apiUrl = 'https://api.openweathermap.org/data/2.5/weather';
     }
 
